@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  audioFiles    AudioFile[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AudioFile {
+  id                String   @id @default(cuid())
+  userId            String
+  originalFileName  String
+  originalFileSize  Int
+  originalFileType  String
+  uploadedAt        DateTime @default(now())
+  processingStatus  String   @default("pending") // pending, processing, completed, failed
+  sessionId         String?  // Backend session ID for file processing
+  outputSessionId   String?  // Backend output session ID for separated files
+  detectedInstruments String? // JSON string of detected instruments
+  selectedInstruments String? // JSON string of selected instruments
+  separatedTracks   String? // JSON string of separated track URLs
+  audioMetadata     String? // JSON string of audio metadata (tempo, duration, etc.)
+  downloadCount     Int      @default(0)
+  lastDownloadedAt  DateTime?
+  processingStartedAt DateTime?
+  processingCompletedAt DateTime?
+  errorMessage      String?
+  // File retention
+  filesAvailable    Boolean  @default(true) // whether files are still available on backend
+  fileExpiresAt     DateTime? // when files are scheduled to expire
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
